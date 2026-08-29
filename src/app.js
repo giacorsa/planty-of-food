@@ -20,6 +20,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-app.listen(3001, () => {
-  console.log("Backend running on http://localhost:3001");
-});
+// app.listen(3001, () => {
+//   console.log("Backend running on http://localhost:3001");
+// });
+
+module.exports = app;

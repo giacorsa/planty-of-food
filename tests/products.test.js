@@ -13,7 +13,7 @@ describe("API Products", () => {
     const res = await request(app)
       .post("/api/products")
       .send({
-        nome: "Melone"
+        name: "Prosciutto"
       });
 
     expect(res.status).toBe(201);

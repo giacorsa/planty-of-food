@@ -19,8 +19,8 @@ describe("API Users", () => {
     const res = await request(app)
       .post("/api/users")
       .send({
-        nome: "Mario",
-        cognome: "Rossi",
+        firstname: "Mario",
+        lastname: "Rossi",
         email: "mario@example.com"
       });
 
