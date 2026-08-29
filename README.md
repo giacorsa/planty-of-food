@@ -67,7 +67,7 @@ SOURCE migrations.sql;
 
 ---
 
-## ⚙️ Installazione
+## ⚙️ Installation
 
 Clone the repository:
 git clone <https://github.com/>giacorsa/pof-backend.git
@@ -75,13 +75,13 @@ cd pof-backend
 
 ---
 
-## Installa le dipendenze
+## Install dependencies
 
 npm install
 
 ---
 
-## Avvio del server
+## Run the server
 
 npm start
 
@@ -90,7 +90,7 @@ The server will start on:
 
 ---
 
-## 🧪 Test automatici
+## 🧪 Automatic Tests
 
 The tests were implemented with:
 
