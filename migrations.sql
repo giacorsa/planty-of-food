@@ -1,0 +1,50 @@
+
+CREATE DATABASE IF NOT EXISTS pof_gas
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+
+USE pof_gas;
+
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(255),
+  cognome VARCHAR(255),
+  email VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE IF NOT EXISTS products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+CREATE TABLE IF NOT EXISTS order_users (
+  order_id INT,
+  user_id INT,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+
+
+CREATE TABLE IF NOT EXISTS order_products (
+  order_id INT,
+  product_id INT,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+
