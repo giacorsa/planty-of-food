@@ -19,3 +19,6 @@ Desktop.ini
 # Build folders (se un giorno userai TypeScript o bundler)
 dist/
 build/
+
+# Configuration files
+.env

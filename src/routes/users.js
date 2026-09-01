@@ -15,10 +15,16 @@ router.get('/', async (req, res, next) => {
 // Get single user
 router.get('/:id', async (req, res, next) => {
     try {
-        const {id} = req.params; 
-        const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+
+        const idNum = Number(req.params.id);
+
+        if (!req.params.id || !Number.isInteger(idNum) || idNum <= 0) {
+            return res.status(400).json({ error: `Invalid user ID` });
+        }
+
+        const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [idNum]);
         if(!rows.length){
-            return res.status(404).json({error: `User with id ${id} not found`});
+            return res.status(404).json({error: `User with id ${idNum} not found`});
         }
         res.json(rows[0]);
     } catch(err) {
@@ -42,37 +48,36 @@ router.post('/', async (req, res, next) => {
 
 // Update user
 router.put('/:id', async (req, res, next) => {
-    try {
-        console.log("REQ BODY: ", req.body);
-        console.log("REQ PARAMS: ", req.params);        
+    try {      
         
         const {firstname, lastname, email} = req.body;
-        const {id} = req.params;
+        const idNum = Number(req.params.id);
 
-        // Verifico che l'utente esiste
-        const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+        if (!req.params.id || !Number.isInteger(idNum) || idNum <= 0) {
+            return res.status(400).json({ error: `Invalid user ID` });
+        }
+
+        const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [idNum]);
 
         if (rows.length === 0) {
-            return res.status(404).json({ error: `User with id ${id} not found` });
+            return res.status(404).json({ error: `User with id ${idNum} not found` });
         }
 
         const currentUser = rows[0];
 
-        // Update parziale: uso i valori nuovi se presenti, altrimenti quelli esistenti
         const newFirstname = firstname ?? currentUser.nome;
         const newLastname  = lastname ?? currentUser.cognome;
         const newEmail     = email ?? currentUser.email;
 
         const [result] = await db.query('UPDATE users SET nome = ?, cognome = ?, email = ? WHERE ID = ?', 
-            [newFirstname, newLastname, newEmail, id]);
+            [newFirstname, newLastname, newEmail, idNum]);
 
-        // Controllo se l'UPDATE ha modificato una riga    
         if (result.affectedRows === 0){
-            return res.status(404).json({ error: `User with id ${id} not found`});
+            return res.status(404).json({ error: `User with id ${idNum} not found`});
         }
 
         res.json({
-                id,
+                id: idNum,
                 firstname: newFirstname,
                 lastname: newLastname,
                 email: newEmail
@@ -85,10 +90,16 @@ router.put('/:id', async (req, res, next) => {
 // Delete user
 router.delete('/:id', async (req, res, next) => {
     try {
-        const {id} = req.params;
-        const [result] = await db.query('DELETE FROM users WHERE id = ?', [id]);
+
+        const idNum = Number(req.params.id);
+
+        if (!req.params.id || !Number.isInteger(idNum) || idNum <= 0) {
+            return res.status(400).json({ error: `Invalid user ID` });
+        }
+
+        const [result] = await db.query('DELETE FROM users WHERE id = ?', [idNum]);
         if(result.affectedRows === 0){
-            return res.status(404).json({error: `User with id ${id} not found`});
+            return res.status(404).json({error: `User with id ${idNum} not found`});
         }
         res.status(204).end();
     } catch(err) {

@@ -15,10 +15,17 @@ router.get("/", async (req, res, next) => {
 // Get single product
 router.get("/:id", async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const [rows] = await db.query("SELECT * FROM products WHERE id = ?", [id]);
+
+    const idNum = Number(req.params.id);
+
+    if (!req.params.id || !Number.isInteger(idNum) || idNum <= 0) {
+          return res.status(400).json({ error: `Invalid user ID` });
+    }
+
+
+    const [rows] = await db.query("SELECT * FROM products WHERE id = ?", [idNum]);
     if (!rows.length) {
-      return res.status(404).json({ error: `Product with id ${id} not found` });
+      return res.status(404).json({ error: `Product with id ${idNum} not found` });
     }
     res.json(rows[0]);
   } catch (err) {
@@ -29,9 +36,8 @@ router.get("/:id", async (req, res, next) => {
 // Create product
 router.post("/", async (req, res, next) => {
   try {
-    console.log("BODY RICEVUTO:", req.body);
-    const { name } = req.body;
-    console.log("name", name);
+   const { name } = req.body;
+    
     if (!name) {
       return res.status(400).json({ error: "Product name required" });
     }
@@ -48,17 +54,23 @@ router.post("/", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
   try {
     const { name } = req.body;
-    const { id } = req.params;
+    const idNum = Number(req.params.id);
+
+    if (!req.params.id || !Number.isInteger(idNum) || idNum <= 0) {
+          return res.status(400).json({ error: `Invalid user ID` });
+    }
+
+
     const [result] = await db.query(
       "UPDATE products SET nome = ? WHERE ID = ?",
-      [name, id],
+      [name, idNum],
     );
     if (result.affectedRows === 0) {
       return res.status(404).json({
-        error: `Product with id ${id} not found`,
+        error: `Product with id ${idNum} not found`,
       });
     }
-    res.json({ id, name });
+    res.json({ id: idNum, name });
   } catch (err) {
     next(err);
   }
@@ -67,14 +79,17 @@ router.put("/:id", async (req, res, next) => {
 // Delete product
 router.delete("/:id", async (req, res, next) => {
   try {
-    console.log("req.params: ", req.params);
-    const { id } = req.params;
-    console.log("id: ", id);
-    const [result] = await db.query("DELETE FROM products WHERE id = ?", [id]);
-    console.log("result: ", result);    
+    const idNum = Number(req.params.id);
+
+    if (!req.params.id || !Number.isInteger(idNum) || idNum <= 0) {
+          return res.status(400).json({ error: `Invalid user ID` });
+    }
+
+    const [result] = await db.query("DELETE FROM products WHERE id = ?", [idNum]);
+       
     if (result.affectedRows === 0) {
       return (
-        res.status(404).json({ error: `Product with id ${id} not found` })
+        res.status(404).json({ error: `Product with id ${idNum} not found` })
       );
     }
     res.status(204).end();

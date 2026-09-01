@@ -2,6 +2,18 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+async function validateIdsExist(conn, table, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return true;
+
+  const placeholders = ids.map(() => '?').join(',');
+  const [rows] = await conn.query(
+    `SELECT id FROM ${table} WHERE id IN (${placeholders})`,
+    ids
+  );
+
+  return rows.length === ids.length;
+}
+
 // CREATE order with usersIds and productsIds
 router.post('/', async (req, res, next) => {
   const conn = await db.getConnection();
@@ -11,7 +23,7 @@ router.post('/', async (req, res, next) => {
     await conn.beginTransaction();
 
     const [orderResult] = await conn.query('INSERT INTO orders () VALUES ()');
-    console.log("CREATE ORDER - orderResult:", orderResult.insertId);
+    
     const orderId = orderResult.insertId;
 
     for (const userId of usersIds) {
@@ -81,7 +93,11 @@ router.get('/', async (req, res, next) => {
 // GET single order (with users & products)
 router.get('/:id', async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (!req.params.id || !Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: `Invalid order ID` });
+    }
 
     const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [id] );
     if (!orders.length) return res.status(404).json({ error: `Order ${id} not found` });
@@ -114,13 +130,13 @@ router.get('/:id', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   const conn = await db.getConnection();
   try {
-    const { id } = req.params;
     const { usersIds = [], productsIds = [] } = req.body;
+    const id = Number(req.params.id);
 
-console.log("usersIds: ", usersIds);
-console.log("productsIds: ", productsIds);
+    if (!req.params.id || !Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: `Invalid order ID` });
+    }
 
-    // Verifico che l'ordine esista
     const [orderRows] = await conn.query(
       'SELECT * FROM orders WHERE id = ?',
       [id]
@@ -132,11 +148,29 @@ console.log("productsIds: ", productsIds);
 
     await conn.beginTransaction();
 
-    // Cancello le vecchie associazioni
+    // VALIDAZIONE UTENTI
+    const usersValid = await validateIdsExist(conn, 'users', usersIds);
+    if (!usersValid) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: 'One or more userIds do not exist'
+      });
+    }
+
+    // VALIDAZIONE PRODOTTI
+    const productsValid = await validateIdsExist(conn, 'products', productsIds);
+    if (!productsValid) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: 'One or more productIds do not exist'
+      });
+    }
+
+    // CANCELLAZIONE COMPLETA
     await conn.query('DELETE FROM order_users WHERE order_id = ?', [id]);
     await conn.query('DELETE FROM order_products WHERE order_id = ?', [id]);
 
-    // Inserisco le nuove associazioni utenti
+    // INSERIMENTO UTENTI
     for (const userId of usersIds) {
       await conn.query(
         'INSERT INTO order_users (order_id, user_id) VALUES (?, ?)',
@@ -144,7 +178,7 @@ console.log("productsIds: ", productsIds);
       );
     }
 
-    // Inserisco le nuove associazioni prodotti
+    // INSERIMENTO PRODOTTI
     for (const productId of productsIds) {
       await conn.query(
         'INSERT INTO order_products (order_id, product_id) VALUES (?, ?)',
@@ -173,8 +207,13 @@ router.patch('/:id', async (req, res, next) => {
   const conn = await db.getConnection();
 
   try {
-    const { id } = req.params;
+
     const { usersIds, productsIds } = req.body;
+    const id = Number(req.params.id);
+
+    if (!req.params.id || !Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: `Invalid order ID` });
+    } 
 
     // Verifico che l'ordine esista
     const [orderRows] = await conn.query(
@@ -188,62 +227,43 @@ router.patch('/:id', async (req, res, next) => {
 
     await conn.beginTransaction();
 
-    // Validazione utenti (se usersIds è presente)
-    if (Array.isArray(usersIds)) {
-      if (usersIds.length > 0) {
-        const [validUsers] = await conn.query(
-          `SELECT id FROM users WHERE id IN (${usersIds.map(() => '?').join(',')})`,
-          usersIds
-        );
-
-        if (validUsers.length !== usersIds.length) {
-          await conn.rollback();
-          return res.status(400).json({
-            error: 'One or more userIds do not exist'
-          });
-        }
-      }
-
-      // Cancello vecchie associazioni utenti
-      await conn.query('DELETE FROM order_users WHERE order_id = ?', [id]);
-
-      // Inserisco le nuove
-      for (const userId of usersIds) {
-        await conn.query(
-          'INSERT INTO order_users (order_id, user_id) VALUES (?, ?)',
-          [id, userId]
-        );
-      }
+  if (Array.isArray(usersIds)) {
+    const usersValid = await validateIdsExist(conn, 'users', usersIds);
+    if (!usersValid) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: 'One or more userIds do not exist'
+      });
     }
 
-    // Validazione prodotti (se productsIds è presente)
-    if (Array.isArray(productsIds)) {
-      if (productsIds.length > 0) {
-        const [validProducts] = await conn.query(
-          `SELECT id FROM products WHERE id IN (${productsIds.map(() => '?').join(',')})`,
-          productsIds
-        );
+    await conn.query('DELETE FROM order_users WHERE order_id = ?', [id]);
 
-        if (validProducts.length !== productsIds.length) {
-          await conn.rollback();
-          return res.status(400).json({
-            error: 'One or more productIds do not exist'
-          });
-        }
-      }
+    for (const userId of usersIds) {
+      await conn.query(
+        'INSERT INTO order_users (order_id, user_id) VALUES (?, ?)',
+        [id, userId]
+      );
+    }
+  }
 
-      // Cancello vecchie associazioni prodotti
-      await conn.query('DELETE FROM order_products WHERE order_id = ?', [id]);
-
-      // Inserisco le nuove
-      for (const productId of productsIds) {
-        await conn.query(
-          'INSERT INTO order_products (order_id, product_id) VALUES (?, ?)',
-          [id, productId]
-        );
-      }
+  if (Array.isArray(productsIds)) {
+    const productsValid = await validateIdsExist(conn, 'products', productsIds);
+    if (!productsValid) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: 'One or more productIds do not exist'
+      });
     }
 
+    await conn.query('DELETE FROM order_products WHERE order_id = ?', [id]);
+
+    for (const productId of productsIds) {
+      await conn.query(
+        'INSERT INTO order_products (order_id, product_id) VALUES (?, ?)',
+        [id, productId]
+      );
+    }
+  }
     await conn.commit();
 
     res.json({
@@ -260,11 +280,14 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
-
 // DELETE order
 router.delete('/:id', async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = Number(req.params.id);
+
+    if (!req.params.id || !Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: `Invalid order ID` });
+    }
 
     const [result] = await db.query(
       'DELETE FROM orders WHERE id = ?',

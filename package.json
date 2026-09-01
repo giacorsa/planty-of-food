@@ -2,16 +2,17 @@
   "name": "pof-backend",
   "version": "1.0.0",
   "main": "src/app.js",
-"scripts": {
-  "start": "node src/server.js",
-  "test": "jest --runInBand"
-},
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "jest --runInBand"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mysql2": "^3.24.2"
   },
